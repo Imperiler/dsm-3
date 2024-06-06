@@ -1,0 +1,79 @@
+#include <AceButton.h>
+
+using namespace ace_button;
+
+static const uint8_t BUTTON_PIN0 = 22;
+static const uint8_t BUTTON_PIN1 = 23;
+bool VERBOSE = false;
+
+Encoded4To2ButtonConfig buttonConfig(BUTTON_PIN0, BUTTON_PIN1);
+
+// Create 3 buttons, assigning them virtual pin numbers 1, 2 and 3.
+AceButton b1(&buttonConfig, 1);
+AceButton b2(&buttonConfig, 2);
+AceButton b3(&buttonConfig, 3);
+
+void handleEvent(AceButton*, uint8_t, uint8_t);
+
+void setup() {
+  delay(1000); // wait for stability
+  Serial.begin(9600);
+  while (! Serial); // Wait until Serial is ready - Leonardo/Micro
+
+  // Configure the real pins for pullup wiring
+  pinMode(BUTTON_PIN0, INPUT_PULLUP);
+  pinMode(BUTTON_PIN1, INPUT_PULLUP);
+
+  // Configure the ButtonConfig with the event handler, and enable all higher
+  // level events.
+  buttonConfig.setEventHandler(handleEvent);
+  buttonConfig.setFeature(ButtonConfig::kFeatureClick);
+  buttonConfig.setFeature(ButtonConfig::kFeatureDoubleClick);
+  buttonConfig.setFeature(ButtonConfig::kFeatureLongPress);
+  buttonConfig.setFeature(ButtonConfig::kFeatureRepeatPress);
+}
+
+void loop() {
+  // Should be called every 4-5ms or faster, for the default debouncing time
+  // of ~20ms.
+  b1.check();
+  b2.check();
+  b3.check();
+
+}
+
+// even types are
+// 0: button pressed
+// 1: button release
+// 2: Button was clicked (Pressed and Released within ButtonConfig::getClickDelay()).
+// 3: button double clicked
+// 4: button longpressed (held longer than ButtonConfig::getLongPressDelay()))
+// https://bxparks.github.io/AceButton/html/classace__button_1_1AceButton.html
+
+void handleEvent(AceButton* button, uint8_t eventType, uint8_t buttonState) {
+  Serial.print(F("handleEvent(): "));
+  Serial.print(F("virtualPin: "));
+  Serial.print(button->getPin());
+  Serial.print(F("; eventType: "));
+  Serial.print(eventType);
+  Serial.print(F("; buttonState: "));
+  Serial.println(buttonState);
+}
+
+void sendPlay() {
+  // as seen in https://forum.pjrc.com/index.php?threads/midi-transport-messages-with-teensy-lc.54710/
+  byte PlayCommandArray [6] = {0xF0, 0x7F, 0x7F, 0x06, 0x02, 0xF7}; 
+  usbMIDI.sendSysEx(6, PlayCommandArray, true); //Send an array of 6 bytes representing the play command
+}
+
+void sendStop() {
+  // as seen in https://forum.pjrc.com/index.php?threads/midi-transport-messages-with-teensy-lc.54710/
+  byte PlayCommandArray [6] = {0xF0, 0x7F, 0x7F, 0x06, 0x02, 0x01}; 
+  usbMIDI.sendSysEx(6, PlayCommandArray, true); //Send an array of 6 bytes representing the stop command
+}
+
+void sendPause() {
+  // as seen in https://forum.pjrc.com/index.php?threads/midi-transport-messages-with-teensy-lc.54710/
+  byte PlayCommandArray [6] = {0xF0, 0x7F, 0x7F, 0x06, 0x02, 0x09}; 
+  usbMIDI.sendSysEx(6, PlayCommandArray, true); //Send an array of 6 bytes representing the pause command
+}
